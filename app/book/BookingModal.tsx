@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 type Slot = {
   id: string
@@ -45,68 +44,39 @@ export default function BookingModal({
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
+    const res = await fetch('/api/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, phone, slotId: slot.id }),
+    })
 
-    // 1. Insert patient
-    const { data: patient, error: patientErr } = await supabase
-      .from('patients')
-      .insert({ name, email, phone })
-      .select('id')
-      .single()
+    const data = await res.json()
 
-    if (patientErr || !patient) {
-      setError('Failed to save patient details. Please try again.')
+    if (!res.ok || !data.bookingId) {
+      setError(data.error ?? 'Something went wrong. Please try again.')
       setLoading(false)
       return
     }
-
-    // 2. Insert booking
-    const { data: booking, error: bookingErr } = await supabase
-      .from('bookings')
-      .insert({
-        slot_id: slot.id,
-        patient_id: patient.id,
-        patient_name: name,
-        patient_email: email,
-        patient_phone: phone,
-        payment_status: 'pending',
-      })
-      .select('id')
-      .single()
-
-    if (bookingErr || !booking) {
-      setError('Failed to create booking. Please try again.')
-      setLoading(false)
-      return
-    }
-
-    // 3. Mark slot unavailable
-    await supabase
-      .from('slots')
-      .update({ is_available: false })
-      .eq('id', slot.id)
 
     onBooked(slot.id)
     router.push(
-      `/confirmation?bookingId=${booking.id}&name=${encodeURIComponent(name)}&date=${encodeURIComponent(slot.slot_date)}&time=${encodeURIComponent(slot.slot_time)}&duration=${slot.duration_minutes}`
+      `/confirmation?bookingId=${data.bookingId}&name=${encodeURIComponent(name)}&date=${encodeURIComponent(slot.slot_date)}&time=${encodeURIComponent(slot.slot_time)}&duration=${slot.duration_minutes}`
     )
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        {/* Header */}
         <div className="bg-teal-600 text-white px-6 py-4 rounded-t-2xl flex justify-between items-start">
           <div>
             <h2 className="text-lg font-bold">Confirm Your Booking</h2>
             <p className="text-teal-100 text-sm mt-1">
-              {formatDate(slot.slot_date)} at {formatTime(slot.slot_time)} · {slot.duration_minutes} min
+              {formatDate(slot.slot_date)} at {formatTime(slot.slot_time)} &middot; {slot.duration_minutes} min
             </p>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white text-2xl leading-none ml-4">×</button>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-2xl leading-none ml-4">&times;</button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
