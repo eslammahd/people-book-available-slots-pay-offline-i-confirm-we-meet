@@ -1,1 +1,2 @@
-// intentionally blank - config lives in next.config.mjs
+/** @type {import('next').NextConfig} */
+module.exports = {}
