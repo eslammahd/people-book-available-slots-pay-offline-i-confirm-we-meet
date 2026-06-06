@@ -1,1 +1,1 @@
-// intentionally blank — active config is next.config.mjs
+// intentionally blank - config lives in next.config.mjs

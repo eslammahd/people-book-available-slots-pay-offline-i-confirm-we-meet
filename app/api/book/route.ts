@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as {
@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
   if (!name || !email || !phone || !slotId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
+
+  const supabase = createClient()
 
   const { data: patient, error: patientErr } = await supabase
     .from('patients')
