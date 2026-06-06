@@ -1,13 +1,15 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { supabase } from '@/lib/supabase'
 import SlotsGrid from './SlotsGrid'
 
+export const revalidate = 0
+
 export default async function BookPage() {
-  const supabase = createServerClient()
+  const today = new Date().toISOString().split('T')[0]
   const { data: slots } = await supabase
     .from('slots')
-    .select('*')
+    .select('id, slot_date, slot_time, duration_minutes, is_available')
     .eq('is_available', true)
-    .gte('slot_date', new Date().toISOString().split('T')[0])
+    .gte('slot_date', today)
     .order('slot_date', { ascending: true })
     .order('slot_time', { ascending: true })
 

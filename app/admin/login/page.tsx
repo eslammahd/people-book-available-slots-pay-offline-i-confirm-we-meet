@@ -11,11 +11,9 @@ export default function AdminLoginPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input type="password" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="••••••••" />
+            <input type="password" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Password" />
           </div>
-          <button className="w-full bg-teal-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-teal-700 transition">
-            Sign In
-          </button>
+          <button className="w-full bg-teal-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-teal-700 transition">Sign In</button>
         </div>
       </div>
     </main>

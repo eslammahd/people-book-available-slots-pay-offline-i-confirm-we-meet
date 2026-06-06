@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import BookingModal from './BookingModal'
 
-type Slot = {
+export type Slot = {
   id: string
   slot_date: string
   slot_time: string
@@ -18,7 +18,7 @@ function formatDate(dateStr: string) {
 
 function formatTime(timeStr: string) {
   const [h, m] = timeStr.split(':')
-  const hour = parseInt(h)
+  const hour = parseInt(h, 10)
   const ampm = hour >= 12 ? 'PM' : 'AM'
   const display = hour % 12 === 0 ? 12 : hour % 12
   return `${display}:${m} ${ampm}`
@@ -28,14 +28,13 @@ export default function SlotsGrid({ slots }: { slots: Slot[] }) {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [bookedIds, setBookedIds] = useState<Set<string>>(new Set())
 
-  // Group by date
+  const visible = slots.filter((s) => !bookedIds.has(s.id))
+
   const grouped: Record<string, Slot[]> = {}
-  for (const slot of slots) {
-    if (bookedIds.has(slot.id)) continue
+  for (const slot of visible) {
     if (!grouped[slot.slot_date]) grouped[slot.slot_date] = []
     grouped[slot.slot_date].push(slot)
   }
-
   const dates = Object.keys(grouped).sort()
 
   if (dates.length === 0) {
@@ -52,9 +51,7 @@ export default function SlotsGrid({ slots }: { slots: Slot[] }) {
       <div className="space-y-8">
         {dates.map((date) => (
           <div key={date}>
-            <h2 className="text-lg font-semibold text-teal-700 mb-3 border-b border-teal-100 pb-2">
-              {formatDate(date)}
-            </h2>
+            <h2 className="text-lg font-semibold text-teal-700 mb-3 border-b border-teal-100 pb-2">{formatDate(date)}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {grouped[date].map((slot) => (
                 <button
@@ -70,7 +67,6 @@ export default function SlotsGrid({ slots }: { slots: Slot[] }) {
           </div>
         ))}
       </div>
-
       {selectedSlot && (
         <BookingModal
           slot={selectedSlot}

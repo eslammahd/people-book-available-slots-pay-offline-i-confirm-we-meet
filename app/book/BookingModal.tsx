@@ -2,13 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-type Slot = {
-  id: string
-  slot_date: string
-  slot_time: string
-  duration_minutes: number
-}
+import type { Slot } from './SlotsGrid'
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -17,7 +11,7 @@ function formatDate(dateStr: string) {
 
 function formatTime(timeStr: string) {
   const [h, m] = timeStr.split(':')
-  const hour = parseInt(h)
+  const hour = parseInt(h, 10)
   const ampm = hour >= 12 ? 'PM' : 'AM'
   const display = hour % 12 === 0 ? 12 : hour % 12
   return `${display}:${m} ${ampm}`
@@ -43,25 +37,26 @@ export default function BookingModal({
     e.preventDefault()
     setLoading(true)
     setError('')
-
-    const res = await fetch('/api/book', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, phone, slotId: slot.id }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok || !data.bookingId) {
-      setError(data.error ?? 'Something went wrong. Please try again.')
+    try {
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, slotId: slot.id }),
+      })
+      const data = await res.json() as { bookingId?: string; error?: string }
+      if (!res.ok || !data.bookingId) {
+        setError(data.error ?? 'Something went wrong. Please try again.')
+        setLoading(false)
+        return
+      }
+      onBooked(slot.id)
+      router.push(
+        `/confirmation?bookingId=${data.bookingId}&name=${encodeURIComponent(name)}&date=${encodeURIComponent(slot.slot_date)}&time=${encodeURIComponent(slot.slot_time)}&duration=${slot.duration_minutes}`
+      )
+    } catch {
+      setError('Network error. Please try again.')
       setLoading(false)
-      return
     }
-
-    onBooked(slot.id)
-    router.push(
-      `/confirmation?bookingId=${data.bookingId}&name=${encodeURIComponent(name)}&date=${encodeURIComponent(slot.slot_date)}&time=${encodeURIComponent(slot.slot_time)}&duration=${slot.duration_minutes}`
-    )
   }
 
   return (
@@ -76,61 +71,23 @@ export default function BookingModal({
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white text-2xl leading-none ml-4">&times;</button>
         </div>
-
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Ahmed Mohamed"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ahmed Mohamed" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. ahmed@example.com"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. ahmed@example.com" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-            <input
-              type="tel"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. 01012345678"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
+            <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 01012345678" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
           </div>
-
-          {error && (
-            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-          )}
-
+          {error && <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-teal-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-teal-700 transition disabled:opacity-60"
-            >
-              {loading ? 'Booking...' : 'Confirm Booking'}
-            </button>
+            <button type="button" onClick={onClose} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm hover:bg-gray-50 transition">Cancel</button>
+            <button type="submit" disabled={loading} className="flex-1 bg-teal-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-teal-700 transition disabled:opacity-60">{loading ? 'Booking...' : 'Confirm Booking'}</button>
           </div>
         </form>
       </div>
