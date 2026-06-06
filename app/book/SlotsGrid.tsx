@@ -13,7 +13,11 @@ export type Slot = {
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 function formatTime(timeStr: string) {
@@ -51,7 +55,9 @@ export default function SlotsGrid({ slots }: { slots: Slot[] }) {
       <div className="space-y-8">
         {dates.map((date) => (
           <div key={date}>
-            <h2 className="text-lg font-semibold text-teal-700 mb-3 border-b border-teal-100 pb-2">{formatDate(date)}</h2>
+            <h2 className="text-lg font-semibold text-teal-700 mb-3 border-b border-teal-100 pb-2">
+              {formatDate(date)}
+            </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {grouped[date].map((slot) => (
                 <button

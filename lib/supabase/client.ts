@@ -1,1 +1,1 @@
-// intentionally replaced by lib/supabase.ts
+export {}

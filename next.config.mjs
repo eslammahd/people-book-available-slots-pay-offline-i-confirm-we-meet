@@ -1,2 +1,5 @@
-// intentionally empty — next.config.js is used instead
-// This file is kept to avoid git conflict with old deployments
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+}
+export default nextConfig
