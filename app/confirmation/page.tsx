@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+type SearchParams = Record<string, string | string[] | undefined>
+
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
@@ -13,13 +15,22 @@ function formatTime(timeStr: string) {
   return `${display}:${m} ${ampm}`
 }
 
+function str(val: string | string[] | undefined): string | undefined {
+  if (Array.isArray(val)) return val[0]
+  return val
+}
+
 export default async function ConfirmationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bookingId?: string; name?: string; date?: string; time?: string; duration?: string }>
+  searchParams: Promise<SearchParams>
 }) {
   const params = await searchParams
-  const { bookingId, name, date, time, duration } = params
+  const bookingId = str(params.bookingId)
+  const name = str(params.name)
+  const date = str(params.date)
+  const time = str(params.time)
+  const duration = str(params.duration)
 
   if (!bookingId) {
     return (
@@ -88,7 +99,7 @@ export default async function ConfirmationPage({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Reference</span>
-              <span className="font-mono text-xs text-gray-600 break-all">{bookingId?.slice(0, 8).toUpperCase()}</span>
+              <span className="font-mono text-xs text-gray-600 break-all">{bookingId.slice(0, 8).toUpperCase()}</span>
             </div>
           </div>
           <p className="text-amber-700 text-xs mt-3">
