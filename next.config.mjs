@@ -1,1 +1,3 @@
-// This file is intentionally blank. next.config.js is the active config.
+/** @type {import('next').NextConfig} */
+const nextConfig = {}
+export default nextConfig
