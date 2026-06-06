@@ -1,7 +1,2 @@
-import type { Config } from 'tailwindcss'
-const config: Config = {
-  content: ['./app/**/*.{ts,tsx}'],
-  theme: { extend: {} },
-  plugins: [],
-}
-export default config
+// Intentionally empty — tailwind.config.js is the active config.
+export {}
