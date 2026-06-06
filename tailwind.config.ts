@@ -1,2 +1,1 @@
-// tailwind config is in tailwind.config.js
-export default {}
+// intentionally blank — active config is tailwind.config.js
