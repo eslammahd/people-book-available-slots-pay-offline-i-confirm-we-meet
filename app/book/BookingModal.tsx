@@ -2,28 +2,37 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Slot } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 
-interface Props {
-  slot: Slot
-  onClose: () => void
+type Slot = {
+  id: string
+  slot_date: string
+  slot_time: string
+  duration_minutes: number
 }
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
 function formatTime(timeStr: string) {
   const [h, m] = timeStr.split(':')
-  const hour = parseInt(h, 10)
+  const hour = parseInt(h)
   const ampm = hour >= 12 ? 'PM' : 'AM'
-  const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+  const display = hour % 12 === 0 ? 12 : hour % 12
   return `${display}:${m} ${ampm}`
 }
 
-export default function BookingModal({ slot, onClose }: Props) {
+export default function BookingModal({
+  slot,
+  onClose,
+  onBooked,
+}: {
+  slot: Slot
+  onClose: () => void
+  onBooked: (slotId: string) => void
+}) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -33,128 +42,126 @@ export default function BookingModal({ slot, onClose }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
     setLoading(true)
+    setError('')
 
-    try {
-      const supabase = createClient()
+    const supabase = createClient()
 
-      // Insert patient
-      const { data: patient, error: patientError } = await supabase
-        .from('patients')
-        .insert({ name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim() })
-        .select('id')
-        .single()
+    // 1. Insert patient
+    const { data: patient, error: patientErr } = await supabase
+      .from('patients')
+      .insert({ name, email, phone })
+      .select('id')
+      .single()
 
-      if (patientError || !patient) {
-        throw new Error('Failed to save patient details.')
-      }
-
-      // Insert booking
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          slot_id: slot.id,
-          patient_id: patient.id,
-          patient_name: name.trim(),
-          patient_email: email.trim().toLowerCase(),
-          patient_phone: phone.trim(),
-          payment_status: 'pending',
-        })
-        .select('id')
-        .single()
-
-      if (bookingError || !booking) {
-        throw new Error('Failed to save booking.')
-      }
-
-      // Mark slot as unavailable
-      await supabase
-        .from('slots')
-        .update({ is_available: false })
-        .eq('id', slot.id)
-
-      router.push(`/confirmation/${booking.id}?name=${encodeURIComponent(name)}&date=${slot.slot_date}&time=${slot.slot_time}&duration=${slot.duration_minutes}`)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-    } finally {
+    if (patientErr || !patient) {
+      setError('Failed to save patient details. Please try again.')
       setLoading(false)
+      return
     }
+
+    // 2. Insert booking
+    const { data: booking, error: bookingErr } = await supabase
+      .from('bookings')
+      .insert({
+        slot_id: slot.id,
+        patient_id: patient.id,
+        patient_name: name,
+        patient_email: email,
+        patient_phone: phone,
+        payment_status: 'pending',
+      })
+      .select('id')
+      .single()
+
+    if (bookingErr || !booking) {
+      setError('Failed to create booking. Please try again.')
+      setLoading(false)
+      return
+    }
+
+    // 3. Mark slot unavailable
+    await supabase
+      .from('slots')
+      .update({ is_available: false })
+      .eq('id', slot.id)
+
+    onBooked(slot.id)
+    router.push(
+      `/confirmation?bookingId=${booking.id}&name=${encodeURIComponent(name)}&date=${encodeURIComponent(slot.slot_date)}&time=${encodeURIComponent(slot.slot_time)}&duration=${slot.duration_minutes}`
+    )
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+        <div className="bg-teal-600 text-white px-6 py-4 rounded-t-2xl flex justify-between items-start">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Book Your Session</h2>
-            <p className="text-sm text-brand-600 mt-0.5">
+            <h2 className="text-lg font-bold">Confirm Your Booking</h2>
+            <p className="text-teal-100 text-sm mt-1">
               {formatDate(slot.slot_date)} at {formatTime(slot.slot_time)} · {slot.duration_minutes} min
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-2xl leading-none ml-4">×</button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your full name"
-              className="w-full border border-slate-200 rounded-lg px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+              placeholder="e.g. Ahmed Mohamed"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full border border-slate-200 rounded-lg px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+              placeholder="e.g. ahmed@example.com"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
             <input
               type="tel"
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+20 1XX XXX XXXX"
-              className="w-full border border-slate-200 rounded-lg px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+              placeholder="e.g. 01012345678"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg border border-red-100">
-              {error}
-            </div>
+            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors mt-2"
-          >
-            {loading ? 'Confirming booking…' : 'Confirm Booking'}
-          </button>
-          <p className="text-xs text-center text-slate-400">
-            By booking you agree to attend the session and complete payment via Vodafone Cash.
-          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-teal-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-teal-700 transition disabled:opacity-60"
+            >
+              {loading ? 'Booking...' : 'Confirm Booking'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

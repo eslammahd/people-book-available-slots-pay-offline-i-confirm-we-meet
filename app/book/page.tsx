@@ -1,13 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Slot } from '@/lib/types'
-import BookingGrid from './BookingGrid'
-
-export const revalidate = 0
+import SlotsGrid from './SlotsGrid'
 
 export default async function BookPage() {
   const supabase = await createClient()
-
-  const { data: slots, error } = await supabase
+  const { data: slots } = await supabase
     .from('slots')
     .select('*')
     .eq('is_available', true)
@@ -15,21 +11,16 @@ export default async function BookPage() {
     .order('slot_date', { ascending: true })
     .order('slot_time', { ascending: true })
 
-  if (error) {
-    return (
-      <div className="max-w-5xl mx-auto px-6 py-16 text-center">
-        <p className="text-red-500">Unable to load available slots. Please try again later.</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12">
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">Available Sessions</h1>
-        <p className="text-slate-500">Choose a slot that works for you and fill in your details.</p>
+    <main className="min-h-screen bg-gradient-to-b from-teal-50 to-white">
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="mb-8">
+          <a href="/" className="text-teal-600 hover:underline text-sm">← Back to Home</a>
+          <h1 className="text-3xl font-bold text-gray-900 mt-4 mb-2">Available Therapy Slots</h1>
+          <p className="text-gray-500">Pick a time that works for you — sessions are 60 minutes each.</p>
+        </div>
+        <SlotsGrid slots={slots ?? []} />
       </div>
-      <BookingGrid slots={(slots as Slot[]) ?? []} />
-    </div>
+    </main>
   )
 }
