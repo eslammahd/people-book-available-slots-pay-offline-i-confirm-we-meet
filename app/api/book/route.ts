@@ -1,35 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/client'
+import { createServerClient } from '@supabase/ssr'
+import type { CookieOptions } from '@supabase/ssr'
 
-export async function POST(req: NextRequest) {
-  const body = (await req.json()) as {
-    name?: string
-    email?: string
-    phone?: string
-    slotId?: string
-  }
-  const { name, email, phone, slotId } = body
+export async function POST(request: NextRequest) {
+  const { slotId, name, email, phone } = await request.json()
 
-  if (!name || !email || !phone || !slotId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  if (!slotId || !name || !email || !phone) {
+    return NextResponse.json({ error: 'All fields are required.' }, { status: 400 })
   }
 
-  const supabase = createClient()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(_cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {},
+      },
+    }
+  )
 
-  const { data: patient, error: patientErr } = await supabase
+  // Check slot is still available
+  const { data: slot, error: slotError } = await supabase
+    .from('slots')
+    .select('id, is_available')
+    .eq('id', slotId)
+    .single()
+
+  if (slotError || !slot) {
+    return NextResponse.json({ error: 'Slot not found.' }, { status: 404 })
+  }
+
+  if (!slot.is_available) {
+    return NextResponse.json({ error: 'This slot is no longer available.' }, { status: 409 })
+  }
+
+  // Insert patient
+  const { data: patient, error: patientError } = await supabase
     .from('patients')
     .insert({ name, email, phone })
     .select('id')
     .single()
 
-  if (patientErr || !patient) {
-    return NextResponse.json(
-      { error: 'Failed to save patient: ' + (patientErr?.message ?? 'unknown') },
-      { status: 500 }
-    )
+  if (patientError || !patient) {
+    return NextResponse.json({ error: 'Failed to save patient details.' }, { status: 500 })
   }
 
-  const { data: booking, error: bookingErr } = await supabase
+  // Insert booking
+  const { data: booking, error: bookingError } = await supabase
     .from('bookings')
     .insert({
       slot_id: slotId,
@@ -42,14 +60,15 @@ export async function POST(req: NextRequest) {
     .select('id')
     .single()
 
-  if (bookingErr || !booking) {
-    return NextResponse.json(
-      { error: 'Failed to create booking: ' + (bookingErr?.message ?? 'unknown') },
-      { status: 500 }
-    )
+  if (bookingError || !booking) {
+    return NextResponse.json({ error: 'Failed to create booking.' }, { status: 500 })
   }
 
-  await supabase.from('slots').update({ is_available: false }).eq('id', slotId)
+  // Mark slot as unavailable
+  await supabase
+    .from('slots')
+    .update({ is_available: false })
+    .eq('id', slotId)
 
   return NextResponse.json({ bookingId: booking.id })
 }
