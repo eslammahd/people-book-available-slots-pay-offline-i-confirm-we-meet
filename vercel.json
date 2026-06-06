@@ -1,3 +1,5 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "buildCommand": "rm -f next.config.js next.config.ts tailwind.config.ts && next build",
+  "installCommand": "npm install"
 }
