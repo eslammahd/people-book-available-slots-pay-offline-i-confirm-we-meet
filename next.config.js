@@ -1,2 +1,3 @@
-// placeholder - deleted at build time
-module.exports = {}
+/** @type {import('next').NextConfig} */
+const nextConfig = {}
+export default nextConfig

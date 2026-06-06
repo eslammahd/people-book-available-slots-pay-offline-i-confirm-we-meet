@@ -2,9 +2,10 @@
   "name": "dr-saad-therapy-booking",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "rm -f next.config.js next.config.ts tailwind.config.ts && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
