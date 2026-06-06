@@ -1,1 +1,6 @@
-// intentionally blank - config lives in tailwind.config.ts
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./app/**/*.{ts,tsx,js,jsx}'],
+  theme: { extend: {} },
+  plugins: [],
+}
